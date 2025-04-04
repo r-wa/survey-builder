@@ -19,6 +19,7 @@ export interface Page {
   title?: string;
   order: number;
   questionIds: string[];
+  sectionId: string;
 }
 
 export interface Survey {
