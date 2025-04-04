@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, ClipboardList, Trash2 } from 'lucide-react';
-import { Survey } from '../types';
+import { ArrowRight, BarChart2, ClipboardList, Link as LinkIcon, Share2, Trash2 } from 'lucide-react';
+import { Survey, SurveyStatistics as SurveyStatsType } from '../types';
 import { api } from '../services/api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
+import { SurveyStatistics } from '../components/SurveyStatistics';
 
 export function SurveyView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [survey, setSurvey] = useState<Survey | null>(null);
+  const [statistics, setStatistics] = useState<SurveyStatsType | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shareableLink, setShareableLink] = useState<string | null>(null);
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   useEffect(() => {
     const fetchSurvey = async () => {
@@ -22,6 +28,9 @@ export function SurveyView() {
         setLoading(true);
         const response = await api.getSurveyById(id);
         setSurvey(response.data);
+        if (response.data.shareableLink) {
+          setShareableLink(response.data.shareableLink);
+        }
       } catch (error) {
         console.error('Failed to fetch survey:', error);
       } finally {
@@ -46,6 +55,41 @@ export function SurveyView() {
     }
   };
 
+  const handleGenerateShareableLink = async () => {
+    if (!id) return;
+    try {
+      const response = await api.generateShareableLink(id);
+      setShareableLink(response.data);
+    } catch (error) {
+      console.error('Failed to generate shareable link:', error);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!shareableLink) return;
+    navigator.clipboard.writeText(shareableLink);
+    setCopyLinkSuccess(true);
+    setTimeout(() => setCopyLinkSuccess(false), 2000);
+  };
+
+  const handleViewStatistics = async () => {
+    if (!id || statistics) {
+      setShowStats(!showStats);
+      return;
+    }
+    
+    try {
+      setLoadingStats(true);
+      const response = await api.getSurveyStatistics(id);
+      setStatistics(response.data);
+      setShowStats(true);
+    } catch (error) {
+      console.error('Failed to load statistics:', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -62,7 +106,7 @@ export function SurveyView() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{survey.title}</h1>
           <div className="mt-2 flex items-center gap-3">
@@ -77,9 +121,14 @@ export function SurveyView() {
             <span className="text-sm text-gray-500">
               Created on {new Date(survey.createdAt).toLocaleDateString()}
             </span>
+            {survey.completionCount > 0 && (
+              <span className="text-sm text-indigo-600 font-medium">
+                {survey.completionCount} response{survey.completionCount !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           {confirmDelete ? (
             <>
               <Button
@@ -104,6 +153,32 @@ export function SurveyView() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleViewStatistics}
+                disabled={loadingStats}
+              >
+                <BarChart2 className="h-4 w-4 mr-2" />
+                {loadingStats ? 'Loading...' : showStats ? 'Hide Statistics' : 'View Statistics'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => shareableLink ? handleCopyLink() : handleGenerateShareableLink()}
+              >
+                {shareableLink ? (
+                  <>
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    {copyLinkSuccess ? 'Copied!' : 'Copy Link'}
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Generate Link
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -122,7 +197,41 @@ export function SurveyView() {
 
       <div className="bg-white shadow-sm rounded-lg p-6 mb-8">
         <p className="text-gray-600">{survey.description}</p>
+        
+        {shareableLink && (
+          <div className="mt-4 p-3 bg-indigo-50 rounded-md border border-indigo-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-indigo-900">Shareable Link</h3>
+                <p className="text-xs text-indigo-700 truncate">{shareableLink}</p>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="shrink-0 bg-white"
+                onClick={handleCopyLink}
+              >
+                {copyLinkSuccess ? 'Copied!' : 'Copy Link'}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {showStats && statistics && (
+        <div className="mb-8">
+          <SurveyStatistics 
+            survey={survey}
+            statistics={statistics}
+          />
+        </div>
+      )}
+
+      {showStats && loadingStats && (
+        <div className="mb-8 py-12 flex justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
 
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Questions</h2>
@@ -143,6 +252,11 @@ export function SurveyView() {
                     {question.options && question.options.length > 0 && (
                       <span className="ml-2">
                         ({question.options.length} option{question.options.length !== 1 ? 's' : ''})
+                      </span>
+                    )}
+                    {question.sectionId && (
+                      <span className="ml-2 text-indigo-600">
+                        {survey.sections?.find(s => s.id === question.sectionId)?.title || 'Section'}
                       </span>
                     )}
                   </div>
