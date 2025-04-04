@@ -4,9 +4,10 @@ import { Survey, Answer, Question } from '../types';
 import { api } from '../services/api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/ui/button';
-import { CheckCircle2, ArrowLeft, ArrowRight, PartyPopper, Award } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { SurveyReview } from '../components/SurveyReview';
 import { MotivationalMessage } from '../components/MotivationalMessage';
+import { SuccessCelebration } from '../components/SuccessCelebration';
 
 export function TakeSurvey() {
   const { id } = useParams<{ id: string }>();
@@ -199,63 +200,12 @@ export function TakeSurvey() {
   }
 
   if (submitted) {
-    // Fun completion screen
-    const formatTime = (seconds: number): string => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}m ${secs}s`;
-    };
-    
-    const getRandomCompliment = (): string => {
-      const compliments = [
-        "Your bug-hunting skills are off the charts!",
-        "You completed this faster than our CI pipeline!",
-        "If only our QA process was as smooth as your survey completion!",
-        "You'd make a fine addition to any testing team!",
-        "Not a single stack overflow while taking this survey. Impressive!"
-      ];
-      return compliments[Math.floor(Math.random() * compliments.length)];
-    };
-    
     return (
-      <div className="max-w-2xl mx-auto py-12">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-8 text-center">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-white bg-opacity-30 mb-4">
-              <PartyPopper className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">Thanks for Completing the Survey!</h2>
-            <p className="text-indigo-100">{getRandomCompliment()}</p>
-          </div>
-          
-          <div className="px-6 py-8">
-            <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-gray-600">Assessment</span>
-              <span className="font-medium">{survey.title}</span>
-            </div>
-            
-            <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-gray-600">Time to Complete</span>
-              <span className="font-medium">{formatTime(completionTime)}</span>
-            </div>
-            
-            <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-gray-600">Questions Answered</span>
-              <span className="font-medium">{survey.questions.length}</span>
-            </div>
-            
-            <div className="flex items-center mt-6 bg-indigo-50 p-4 rounded-lg">
-              <Award className="h-5 w-5 text-indigo-600 mr-3 flex-shrink-0" />
-              <p className="text-sm text-indigo-700">
-                Your responses have been submitted and will be reviewed by our team.
-              </p>
-            </div>
-            
-            <div className="mt-8 flex justify-center">
-              <Button onClick={() => navigate('/')}>Return to Home</Button>
-            </div>
-          </div>
-        </div>
+      <div className="max-w-4xl mx-auto">
+        <SuccessCelebration 
+          timeElapsed={completionTime}
+          onClose={() => navigate('/')}
+        />
       </div>
     );
   }
