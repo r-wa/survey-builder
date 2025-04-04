@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, BarChart2, ClipboardList, Link as LinkIcon, Share2, Trash2 } from 'lucide-react';
+import { ArrowRight, BarChart2, Link as LinkIcon, Share2, Trash2 } from 'lucide-react';
 import { Survey, SurveyStatistics as SurveyStatsType } from '../types';
 import { api } from '../services/api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
 import { SurveyStatistics } from '../components/SurveyStatistics';
+import { SurveyLogo } from '../components/SurveyLogo';
 
 export function SurveyView() {
   const { id } = useParams<{ id: string }>();
@@ -186,7 +187,7 @@ export function SurveyView() {
               </Button>
               <Button size="sm">
                 <Link to={`/survey/${id}/take`} className="flex items-center">
-                  <ClipboardList className="h-4 w-4 mr-2" />
+                  <SurveyLogo size="sm" className="mr-2" />
                   Take Survey
                 </Link>
               </Button>

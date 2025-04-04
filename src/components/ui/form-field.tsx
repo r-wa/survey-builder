@@ -6,7 +6,7 @@ import { Tooltip } from './tooltip';
 interface FormFieldProps {
   label: string;
   htmlFor?: string;
-  error?: string;
+  error?: string | boolean;
   hint?: string;
   required?: boolean;
   className?: string;
@@ -42,7 +42,7 @@ export function FormField({
       
       {children}
       
-      {error && (
+      {typeof error === 'string' && error !== '' && (
         <p className="text-sm text-red-600 mt-1 animate-fadeIn">
           {error}
         </p>

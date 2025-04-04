@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ClipboardList, Home, List, Menu, Plus, X } from 'lucide-react';
+import { Home, List, Menu, Plus, X } from 'lucide-react';
 import { Button } from './ui/button';
+import { SurveyLogo } from './SurveyLogo';
 
 export function NavBar() {
   const location = useLocation();
@@ -28,8 +29,8 @@ export function NavBar() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center">
-              <ClipboardList className="h-8 w-8 text-indigo-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">SurveyBuilder</span>
+              <SurveyLogo size="lg" />
+              <span className="ml-3 text-xl font-bold text-gray-900">SurveyBuilder</span>
             </Link>
           </div>
 

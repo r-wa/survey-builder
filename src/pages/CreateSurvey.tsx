@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Trash2, ArrowRight, ArrowLeft, Layers, FileText, Move, AlertCircle, Info } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -44,6 +44,107 @@ export function CreateSurvey() {
     title?: boolean;
     description?: boolean;
   }>({});
+
+  // Add a state for form validity
+  const [isFormValid, setIsFormValid] = useState(false);
+  
+  // Use useEffect to validate the survey when needed
+  useEffect(() => {
+    if (step === 3) {
+      // Only validate when on step 3
+      const validateForm = () => {
+        const newErrors: typeof errors = {};
+        let isValid = true;
+        
+        // Basic validation
+        if (!formData.title) {
+          newErrors.title = "Title is required";
+          isValid = false;
+        }
+        
+        if (!formData.description) {
+          newErrors.description = "Description is required";
+          isValid = false;
+        }
+        
+        if (formData.questions.length === 0) {
+          newErrors.sections = "At least one question is required";
+          isValid = false;
+        }
+
+        // Ensure each section has at least one page
+        if (formData.sections.length === 0) {
+          newErrors.sections = "Please create at least one section";
+          isValid = false;
+        } else {
+          const sectionErrors: {[key: string]: string} = {};
+          
+          for (const section of formData.sections) {
+            const sectionPages = getSectionPages(section.id);
+            if (sectionPages.length === 0) {
+              sectionErrors[section.id] = `Section "${section.title}" has no pages`;
+              isValid = false;
+            }
+          }
+          
+          if (Object.keys(sectionErrors).length > 0) {
+            newErrors.pages = sectionErrors;
+          }
+        }
+
+        // Ensure each page has at least one question
+        const questionErrors: {[key: string]: {[key: string]: string}} = {};
+        
+        for (const page of formData.pages) {
+          if (page.questionIds.length === 0) {
+            const pageTitle = page.title || 'Untitled Page';
+            if (!newErrors.pages) newErrors.pages = {};
+            newErrors.pages[page.id] = `Page "${pageTitle}" has no questions`;
+            isValid = false;
+          }
+          
+          // Validate each question on the page
+          const pageQuestions = getPageQuestions(page.id);
+          const pageQuestionErrors: {[key: string]: string} = {};
+          
+          for (const question of pageQuestions) {
+            if (!question.question.trim()) {
+              pageQuestionErrors[question.id] = "Question text is required";
+              isValid = false;
+            }
+            
+            if ((question.type === 'multiChoice' || question.type === 'checkbox') && 
+                (!question.options || question.options.length < 2)) {
+              pageQuestionErrors[question.id] = "At least two options are required";
+              isValid = false;
+            }
+          }
+          
+          if (Object.keys(pageQuestionErrors).length > 0) {
+            if (!questionErrors[page.id]) questionErrors[page.id] = {};
+            questionErrors[page.id] = pageQuestionErrors;
+          }
+        }
+        
+        if (Object.keys(questionErrors).length > 0) {
+          newErrors.questions = questionErrors;
+        }
+        
+        setErrors(newErrors);
+        setIsFormValid(isValid);
+      };
+      
+      validateForm();
+    }
+  }, [step, formData]);
+
+  // Replace validateSurvey with a function that returns the current state
+  const validateSurvey = (): boolean => {
+    if (step === 3) {
+      return isFormValid;
+    }
+    return true;
+  };
 
   // Section management
   const addSection = () => {
@@ -231,91 +332,8 @@ export function CreateSurvey() {
     ).filter(Boolean) as Question[];
   };
 
-  // Validation before submission
-  const validateSurvey = (): boolean => {
-    const newErrors: typeof errors = {};
-    let isValid = true;
-    
-    // Basic validation
-    if (!formData.title) {
-      newErrors.title = "Title is required";
-      isValid = false;
-    }
-    
-    if (!formData.description) {
-      newErrors.description = "Description is required";
-      isValid = false;
-    }
-    
-    if (formData.questions.length === 0) {
-      newErrors.sections = "At least one question is required";
-      isValid = false;
-    }
-
-    // Ensure each section has at least one page
-    if (formData.sections.length === 0) {
-      newErrors.sections = "Please create at least one section";
-      isValid = false;
-    } else {
-      const sectionErrors: {[key: string]: string} = {};
-      
-      for (const section of formData.sections) {
-        const sectionPages = getSectionPages(section.id);
-        if (sectionPages.length === 0) {
-          sectionErrors[section.id] = `Section "${section.title}" has no pages`;
-          isValid = false;
-        }
-      }
-      
-      if (Object.keys(sectionErrors).length > 0) {
-        newErrors.pages = sectionErrors;
-      }
-    }
-
-    // Ensure each page has at least one question
-    const questionErrors: {[key: string]: {[key: string]: string}} = {};
-    
-    for (const page of formData.pages) {
-      if (page.questionIds.length === 0) {
-        const pageTitle = page.title || 'Untitled Page';
-        if (!newErrors.pages) newErrors.pages = {};
-        newErrors.pages[page.id] = `Page "${pageTitle}" has no questions`;
-        isValid = false;
-      }
-      
-      // Validate each question on the page
-      const pageQuestions = getPageQuestions(page.id);
-      const pageQuestionErrors: {[key: string]: string} = {};
-      
-      for (const question of pageQuestions) {
-        if (!question.question.trim()) {
-          pageQuestionErrors[question.id] = "Question text is required";
-          isValid = false;
-        }
-        
-        if ((question.type === 'multiChoice' || question.type === 'checkbox') && 
-            (!question.options || question.options.length < 2)) {
-          pageQuestionErrors[question.id] = "At least two options are required";
-          isValid = false;
-        }
-      }
-      
-      if (Object.keys(pageQuestionErrors).length > 0) {
-        if (!questionErrors[page.id]) questionErrors[page.id] = {};
-        questionErrors[page.id] = pageQuestionErrors;
-      }
-    }
-    
-    if (Object.keys(questionErrors).length > 0) {
-      newErrors.questions = questionErrors;
-    }
-    
-    setErrors(newErrors);
-    return isValid;
-  };
-
   // Validate a specific field
-  const validateField = (field: string, value: any) => {
+  const validateField = (field: string, value: string): void => {
     const newErrors = { ...errors };
     
     switch (field) {
@@ -415,7 +433,7 @@ export function CreateSurvey() {
               </Button>
             )}
             {step === 3 && (
-              <Button onClick={handleSubmit} disabled={!validateSurvey()}>
+              <Button onClick={handleSubmit} disabled={!isFormValid}>
                 Create Assessment
               </Button>
             )}
@@ -773,11 +791,11 @@ export function CreateSurvey() {
                                 ? "bg-red-50 border-red-200" 
                                 : "bg-gray-50 border-gray-200"
                             )}>
-                              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between">
                                 <div className="flex items-center">
-                                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-indigo-100 text-indigo-800 text-sm font-medium">
-                                    {index + 1}
-                                  </span>
+                <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-indigo-100 text-indigo-800 text-sm font-medium">
+                  {index + 1}
+                </span>
                                   {errors.questions?.[activePage]?.[question.id] && (
                                     <span className="ml-2 text-sm text-red-600 flex items-center">
                                       <AlertCircle className="h-4 w-4 mr-1" />
@@ -785,15 +803,15 @@ export function CreateSurvey() {
                                     </span>
                                   )}
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeQuestion(question.id)}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeQuestion(question.id)}
                                   className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
                               
                               <div className="mt-3 space-y-3">
                                 <FormField
@@ -801,9 +819,9 @@ export function CreateSurvey() {
                                   htmlFor={`question-type-${question.id}`}
                                   hint="Select the type of response you want"
                                 >
-                                  <select
+                  <select
                                     id={`question-type-${question.id}`}
-                                    value={question.type}
+                    value={question.type}
                                     onChange={(e) => {
                                       const newType = e.target.value as Question['type'];
                                       // If switching to multiChoice/checkbox, initialize with two options
@@ -817,12 +835,12 @@ export function CreateSurvey() {
                                         options
                                       });
                                     }}
-                                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                                  >
-                                    {questionTypes.map(type => (
-                                      <option key={type.value} value={type.value}>{type.label}</option>
-                                    ))}
-                                  </select>
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                  >
+                    {questionTypes.map(type => (
+                      <option key={type.value} value={type.value}>{type.label}</option>
+                    ))}
+                  </select>
                                 </FormField>
                                 
                                 <FormField
@@ -832,22 +850,22 @@ export function CreateSurvey() {
                                   hint="Write a clear, specific question"
                                   required
                                 >
-                                  <input
+                  <input
                                     id={`question-text-${question.id}`}
-                                    type="text"
-                                    value={question.question}
-                                    onChange={(e) => updateQuestion(question.id, { question: e.target.value })}
+                    type="text"
+                    value={question.question}
+                    onChange={(e) => updateQuestion(question.id, { question: e.target.value })}
                                     className={cn(
                                       "mt-1 block w-full rounded-md border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 sm:text-sm transition-all",
                                       errors.questions?.[activePage]?.[question.id] && question.question.trim() === '' 
                                         ? "border-red-300 focus:border-red-500 focus:ring-red-500" 
                                         : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                     )}
-                                    placeholder="Enter your question..."
-                                  />
+                    placeholder="Enter your question..."
+                  />
                                 </FormField>
                                 
-                                {(question.type === 'multiChoice' || question.type === 'checkbox') && (
+                {(question.type === 'multiChoice' || question.type === 'checkbox') && (
                                   <FormField
                                     label="Options"
                                     htmlFor={`question-options-${question.id}`}
@@ -855,20 +873,20 @@ export function CreateSurvey() {
                                     hint="Add response options for the participant to choose from"
                                     required
                                   >
-                                    <div className="mt-2 space-y-2">
-                                      {question.options?.map((option, optionIndex) => (
+                    <div className="mt-2 space-y-2">
+                      {question.options?.map((option, optionIndex) => (
                                         <div key={optionIndex} className="flex items-center space-x-2">
-                                          <input
-                                            type="text"
-                                            value={option}
-                                            onChange={(e) => {
-                                              const newOptions = [...(question.options || [])];
-                                              newOptions[optionIndex] = e.target.value;
-                                              updateQuestion(question.id, { options: newOptions });
-                                            }}
-                                            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                                            placeholder={`Option ${optionIndex + 1}`}
-                                          />
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...(question.options || [])];
+                            newOptions[optionIndex] = e.target.value;
+                            updateQuestion(question.id, { options: newOptions });
+                          }}
+                          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                          placeholder={`Option ${optionIndex + 1}`}
+                        />
                                           {question.options && question.options.length > 2 && (
                                             <Button
                                               type="button"
@@ -885,19 +903,19 @@ export function CreateSurvey() {
                                             </Button>
                                           )}
                                         </div>
-                                      ))}
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          const newOptions = [...(question.options || []), ''];
-                                          updateQuestion(question.id, { options: newOptions });
-                                        }}
-                                      >
-                                        Add Option
-                                      </Button>
-                                    </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newOptions = [...(question.options || []), ''];
+                          updateQuestion(question.id, { options: newOptions });
+                        }}
+                      >
+                        Add Option
+                      </Button>
+                    </div>
                                   </FormField>
                                 )}
                                 
@@ -918,17 +936,17 @@ export function CreateSurvey() {
                                         </div>
                                       ))}
                                     </div>
-                                  </div>
-                                )}
+                  </div>
+                )}
                                 
-                                <div className="flex items-center">
-                                  <input
-                                    type="checkbox"
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
                                     id={`required-${question.id}`}
-                                    checked={question.required}
-                                    onChange={(e) => updateQuestion(question.id, { required: e.target.checked })}
-                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                  />
+                    checked={question.required}
+                    onChange={(e) => updateQuestion(question.id, { required: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
                                   <label htmlFor={`required-${question.id}`} className="ml-2 block text-sm text-gray-900">
                                     Required question
                                   </label>
@@ -1095,9 +1113,9 @@ export function CreateSurvey() {
                               No pages in this section
                             </div>
                           )}
-                        </div>
-                      </div>
-                    ))}
+              </div>
+            </div>
+          ))}
                   </div>
                 ) : (
                   <div className="mt-4 bg-red-50 p-4 rounded-md text-red-600">

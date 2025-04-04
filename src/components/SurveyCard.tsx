@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Eye, Trash2, Award } from 'lucide-react';
+import { Calendar, Eye, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Survey } from '../types';
 import { Button } from './ui/button';
+import { SurveyLogo } from './SurveyLogo';
 
 interface SurveyCardProps {
   survey: Survey;
@@ -69,7 +70,7 @@ export function SurveyCard({ survey, onDelete, isDeleting }: SurveyCardProps) {
             asChild
           >
             <Link to={`/survey/${survey.id}/take`}>
-              <Award className="h-4 w-4 mr-1" />
+              <SurveyLogo size="sm" className="mr-1" />
               Take
             </Link>
           </Button>
