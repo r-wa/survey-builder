@@ -48,6 +48,10 @@ export function CreateSurvey() {
   // Add a state for form validity
   const [isFormValid, setIsFormValid] = useState(false);
   
+  // Add these new state variables
+  const [createdSurvey, setCreatedSurvey] = useState<{id: string, shareableLink: string} | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  
   // Use useEffect to validate the survey when needed
   useEffect(() => {
     if (step === 3) {
@@ -381,27 +385,30 @@ export function CreateSurvey() {
 
   const handleSubmit = async () => {
     if (!validateSurvey()) {
-      // Show helper message
-      const firstError = Object.keys(errors)[0];
-      if (firstError) {
-        const errorMessage = errors[firstError as keyof typeof errors];
-        if (typeof errorMessage === 'string') {
-          alert(`Please fix the following error: ${errorMessage}`);
-        } else {
-          alert("Please fix all validation errors before submitting");
-        }
-      }
       return;
     }
     
     setLoading(true);
+    
     try {
-      await api.createSurvey({
+      // Save the survey - let the API handle the ID generation
+      const response = await api.createSurvey({
         ...formData,
         status: 'published',
-        completionCount: 0
+        completionCount: 0,
       });
-      navigate('/surveys');
+      
+      // Get the actual ID and shareable link from the response
+      const { id, shareableLink } = response.data;
+      
+      // Set the created survey details
+      setCreatedSurvey({ 
+        id, 
+        shareableLink: shareableLink || `${window.location.origin}/survey/${id}/take`
+      });
+      
+      // Move to the success screen
+      setStep(4);
     } catch (error) {
       console.error('Failed to create survey:', error);
       alert("An error occurred while creating the survey. Please try again.");
@@ -420,8 +427,8 @@ export function CreateSurvey() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Create Assessment</h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">Step {step} of 3</span>
-            {step > 1 && (
+            <span className="text-sm text-gray-500">Step {step} of 4</span>
+            {step > 1 && step < 4 && (
               <Button variant="outline" onClick={() => setStep(step - 1)}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
@@ -1313,6 +1320,61 @@ export function CreateSurvey() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add celebration screen */}
+      {step === 4 && createdSurvey && (
+        <div className="bg-white shadow-sm rounded-lg p-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Your survey is live! 🎉</h2>
+          <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+            Great job! You've created an awesome assessment that's ready to share with your participants.
+          </p>
+          
+          <div className="bg-indigo-50 p-4 rounded-lg max-w-lg mx-auto mb-8">
+            <h3 className="font-medium text-indigo-800 mb-2">Shareable Link</h3>
+            <div className="flex items-center">
+              <input
+                type="text"
+                value={createdSurvey.shareableLink}
+                readOnly
+                className="flex-1 text-sm border rounded-l-md px-3 py-2 bg-white text-gray-800"
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(createdSurvey.shareableLink);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 3000);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-r-md text-sm font-medium"
+              >
+                {linkCopied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <p className="text-xs text-indigo-700 mt-2">
+              Share this link with people you want to take your survey.
+            </p>
+          </div>
+          
+          <div className="flex space-x-4 justify-center">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/survey/${createdSurvey.id}`)}
+            >
+              View Survey Details
+            </Button>
+            <Button
+              onClick={() => navigate('/surveys')}
+            >
+              Go to My Surveys
+            </Button>
           </div>
         </div>
       )}

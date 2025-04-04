@@ -11,19 +11,19 @@ export function Layout({ children }: LayoutProps) {
   const isLandingPage = location.pathname === '/';
   
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header - Only show NavBar when not on landing page */}
       {!isLandingPage && <NavBar />}
       
       {/* Main Content */}
-      <main className={`flex-grow ${isLandingPage ? 'pt-0' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-grow flex flex-col">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
           {children}
         </div>
       </main>
       
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-6">
+      {/* Footer - Fixed at bottom */}
+      <footer className="bg-white border-t border-gray-200 py-6 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-gray-500">
