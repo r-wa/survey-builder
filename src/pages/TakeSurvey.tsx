@@ -4,8 +4,9 @@ import { Survey, Answer, Question } from '../types';
 import { api } from '../services/api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Button } from '../components/ui/button';
-import { CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, ArrowRight, PartyPopper, Award } from 'lucide-react';
 import { SurveyReview } from '../components/SurveyReview';
+import { MotivationalMessage } from '../components/MotivationalMessage';
 
 export function TakeSurvey() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ export function TakeSurvey() {
   const [currentPage, setCurrentPage] = useState(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [isReviewing, setIsReviewing] = useState(false);
+  const [completionTime, setCompletionTime] = useState<number>(0);
 
   useEffect(() => {
     const fetchSurvey = async () => {
@@ -155,8 +157,9 @@ export function TakeSurvey() {
     
     try {
       setSubmitting(true);
-      const completionTime = Math.floor((Date.now() - startTime) / 1000);
-      await api.submitSurveyResponse(id, answers, completionTime);
+      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+      setCompletionTime(timeSpent);
+      await api.submitSurveyResponse(id, answers, timeSpent);
       setSubmitted(true);
     } catch (error) {
       console.error('Failed to submit survey:', error);
@@ -196,21 +199,70 @@ export function TakeSurvey() {
   }
 
   if (submitted) {
+    // Fun completion screen
+    const formatTime = (seconds: number): string => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}m ${secs}s`;
+    };
+    
+    const getRandomCompliment = (): string => {
+      const compliments = [
+        "Your bug-hunting skills are off the charts!",
+        "You completed this faster than our CI pipeline!",
+        "If only our QA process was as smooth as your survey completion!",
+        "You'd make a fine addition to any testing team!",
+        "Not a single stack overflow while taking this survey. Impressive!"
+      ];
+      return compliments[Math.floor(Math.random() * compliments.length)];
+    };
+    
     return (
-      <div className="max-w-4xl mx-auto text-center py-12">
-        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
-          <CheckCircle2 className="h-8 w-8 text-green-600" />
+      <div className="max-w-2xl mx-auto py-12">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-8 text-center">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-white bg-opacity-30 mb-4">
+              <PartyPopper className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-2">Thanks for Completing the Survey!</h2>
+            <p className="text-indigo-100">{getRandomCompliment()}</p>
+          </div>
+          
+          <div className="px-6 py-8">
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <span className="text-gray-600">Assessment</span>
+              <span className="font-medium">{survey.title}</span>
+            </div>
+            
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <span className="text-gray-600">Time to Complete</span>
+              <span className="font-medium">{formatTime(completionTime)}</span>
+            </div>
+            
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <span className="text-gray-600">Questions Answered</span>
+              <span className="font-medium">{survey.questions.length}</span>
+            </div>
+            
+            <div className="flex items-center mt-6 bg-indigo-50 p-4 rounded-lg">
+              <Award className="h-5 w-5 text-indigo-600 mr-3 flex-shrink-0" />
+              <p className="text-sm text-indigo-700">
+                Your responses have been submitted and will be reviewed by our team.
+              </p>
+            </div>
+            
+            <div className="mt-8 flex justify-center">
+              <Button onClick={() => navigate('/')}>Return to Home</Button>
+            </div>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Thank You!</h1>
-        <p className="text-gray-600 mb-6">Your response has been submitted successfully.</p>
-        <Button onClick={() => navigate('/surveys')}>View More Surveys</Button>
       </div>
     );
   }
 
   if (isReviewing) {
     return (
-      <SurveyReview 
+      <SurveyReview
         survey={survey}
         answers={answers}
         onBack={handleBackFromReview}
@@ -224,164 +276,140 @@ export function TakeSurvey() {
   const progress = getProgress();
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{survey.title}</h1>
-        <p className="mt-2 text-gray-600">{survey.description}</p>
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{survey.title}</h1>
+        <p className="text-gray-600">{survey.description}</p>
         
-        {survey.pages.length > 1 && (
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div 
-                className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" 
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-            <div className="mt-1 text-sm text-gray-500 flex justify-between">
-              <span>Page {currentPage + 1} of {survey.pages.length}</span>
-              <span>{progress}% completed</span>
-            </div>
+        <div className="mt-4 mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-gray-600">Page {currentPage + 1} of {survey.pages.length}</span>
+            <span className="text-sm font-medium text-gray-900">{progress}% Complete</span>
           </div>
-        )}
+          <div className="bg-gray-200 rounded-full h-2.5">
+            <div 
+              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-in-out" 
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+        
+        {/* Add motivational message */}
+        <MotivationalMessage progress={progress} />
       </div>
-
-      <div className="space-y-6">
-        {currentQuestions.map((question, index) => (
-          <div key={question.id} className="bg-white shadow-sm rounded-lg p-6">
-            <div className="flex items-start">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-indigo-100 text-indigo-800 text-sm font-medium mr-3">
-                {index + 1}
+      
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        {currentQuestions.map((question) => (
+          <div key={question.id} className="mb-8 last:mb-0">
+            <div className="mb-2 flex items-start">
+              <span className="text-base font-medium text-gray-900">
+                {question.question}
+                {question.required && <span className="text-red-500 ml-1">*</span>}
               </span>
-              <div className="flex-1">
-                <h3 className="text-lg font-medium text-gray-900 mb-1">
-                  {question.question}
-                  {question.required && <span className="text-red-500 ml-1">*</span>}
-                </h3>
-                
-                {question.type === 'text' && (
-                  <textarea
-                    value={answers.find(a => a.questionId === question.id)?.value as string || ''}
-                    onChange={(e) => updateAnswer(question.id, e.target.value)}
-                    rows={3}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                    placeholder="Enter your answer..."
-                  />
-                )}
-                
-                {question.type === 'multiChoice' && question.options && (
-                  <div className="mt-2 space-y-2">
-                    {question.options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center">
-                        <input
-                          type="radio"
-                          id={`${question.id}-option-${optionIndex}`}
-                          name={question.id}
-                          checked={(answers.find(a => a.questionId === question.id)?.value as string) === option}
-                          onChange={() => updateAnswer(question.id, option)}
-                          className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <label htmlFor={`${question.id}-option-${optionIndex}`} className="ml-3 block text-sm text-gray-700">
-                          {option}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {question.type === 'checkbox' && question.options && (
-                  <div className="mt-2 space-y-2">
-                    {question.options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={`${question.id}-option-${optionIndex}`}
-                          checked={(answers.find(a => a.questionId === question.id)?.value as string[])?.includes(option) || false}
-                          onChange={(e) => {
-                            const currentValue = answers.find(a => a.questionId === question.id)?.value as string[] || [];
-                            const newValue = e.target.checked
-                              ? [...currentValue, option]
-                              : currentValue.filter(v => v !== option);
-                            updateAnswer(question.id, newValue);
-                          }}
-                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <label htmlFor={`${question.id}-option-${optionIndex}`} className="ml-3 block text-sm text-gray-700">
-                          {option}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {question.type === 'rating' && (
-                  <div className="mt-2">
-                    <div className="flex space-x-1">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <button
-                          key={rating}
-                          type="button"
-                          onClick={() => updateAnswer(question.id, rating)}
-                          className={`h-10 w-10 rounded-md border ${
-                            (answers.find(a => a.questionId === question.id)?.value as number) >= rating
-                              ? 'bg-indigo-600 border-indigo-600 text-white'
-                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {rating}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-1 flex justify-between text-xs text-gray-500">
-                      <span>Poor</span>
-                      <span>Excellent</span>
-                    </div>
-                  </div>
-                )}
-                
-                {errors[question.id] && (
-                  <p className="mt-1 text-sm text-red-600">{errors[question.id]}</p>
-                )}
-              </div>
             </div>
+            
+            {/* Question inputs based on type */}
+            {question.type === 'text' && (
+              <textarea
+                value={answers.find(a => a.questionId === question.id)?.value as string || ''}
+                onChange={(e) => updateAnswer(question.id, e.target.value)}
+                className={`w-full p-3 border rounded-md ${errors[question.id] ? 'border-red-500' : 'border-gray-300'}`}
+                rows={4}
+              />
+            )}
+            
+            {question.type === 'multiChoice' && question.options && (
+              <div className="space-y-2">
+                {question.options.map((option, idx) => (
+                  <label key={idx} className="flex items-center">
+                    <input
+                      type="radio"
+                      name={question.id}
+                      value={option}
+                      checked={answers.find(a => a.questionId === question.id)?.value === option}
+                      onChange={() => updateAnswer(question.id, option)}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-gray-700">{option}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            
+            {question.type === 'checkbox' && question.options && (
+              <div className="space-y-2">
+                {question.options.map((option, idx) => (
+                  <label key={idx} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      value={option}
+                      checked={(answers.find(a => a.questionId === question.id)?.value as string[] || []).includes(option)}
+                      onChange={(e) => {
+                        const currentValues = [...(answers.find(a => a.questionId === question.id)?.value as string[] || [])];
+                        if (e.target.checked) {
+                          updateAnswer(question.id, [...currentValues, option]);
+                        } else {
+                          updateAnswer(question.id, currentValues.filter(v => v !== option));
+                        }
+                      }}
+                      className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-gray-700">{option}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            
+            {question.type === 'rating' && (
+              <div className="flex space-x-4 mt-2">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    type="button"
+                    onClick={() => updateAnswer(question.id, rating)}
+                    className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium ${
+                      answers.find(a => a.questionId === question.id)?.value === rating
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {rating}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {errors[question.id] && (
+              <p className="mt-2 text-sm text-red-600">{errors[question.id]}</p>
+            )}
           </div>
         ))}
-
-        <div className="pt-4 pb-10 flex justify-between">
-          {currentPage > 0 ? (
-            <Button 
-              variant="outline" 
-              onClick={handlePrevPage}
-              className="flex items-center"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Previous
-            </Button>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <Button 
+          variant="outline" 
+          onClick={handlePrevPage}
+          disabled={currentPage === 0}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Previous
+        </Button>
+        <Button 
+          onClick={handleNextPage}
+        >
+          {currentPage < survey.pages.length - 1 ? (
+            <>
+              Next
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </>
           ) : (
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/surveys')}
-            >
-              Cancel
-            </Button>
+            <>
+              Review Answers
+              <CheckCircle2 className="ml-2 h-4 w-4" />
+            </>
           )}
-          
-          <Button 
-            onClick={handleNextPage}
-            className="flex items-center"
-          >
-            {currentPage < survey.pages.length - 1 ? (
-              <>
-                Next
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            ) : (
-              <>
-                Review Answers
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </div>
+        </Button>
       </div>
     </div>
   );

@@ -1,16 +1,18 @@
 import { Survey, MockAPIResponse, SurveyResponse, Answer, SurveyStatistics } from '../types';
-import { mockSurveys } from '../data/mockData';
+import { storageService } from './localStorage';
 
+// Add some simulated network delay for a more realistic experience
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Store survey responses
-const mockSurveyResponses: SurveyResponse[] = [];
+// Initialize mock data in localStorage
+storageService.initMockData();
 
 export const api = {
   async getSurveys(): Promise<MockAPIResponse<Survey[]>> {
     await delay(800); // Simulate network delay
+    const surveys = storageService.getSurveys();
     return {
-      data: mockSurveys,
+      data: surveys,
       status: 200,
       message: 'Success'
     };
@@ -18,7 +20,7 @@ export const api = {
 
   async getSurveyById(id: string): Promise<MockAPIResponse<Survey>> {
     await delay(600);
-    const survey = mockSurveys.find(s => s.id === id);
+    const survey = storageService.getSurveyById(id);
     if (!survey) {
       throw new Error('Survey not found');
     }
@@ -33,12 +35,18 @@ export const api = {
     await delay(1000);
     const newSurvey: Survey = {
       ...survey,
-      id: Math.random().toString(36).substr(2, 9),
+      id: `survey-${Math.random().toString(36).substring(2, 11)}`,
       createdAt: new Date().toISOString(),
       completionCount: 0,
-      shareableLink: `${window.location.origin}/s/${Math.random().toString(36).substr(2, 8)}`
+      shareableLink: ''
     };
-    mockSurveys.push(newSurvey);
+    
+    // Generate the shareable link
+    newSurvey.shareableLink = storageService.generateShareableLink(newSurvey.id);
+    
+    // Save to localStorage
+    storageService.saveSurvey(newSurvey);
+    
     return {
       data: newSurvey,
       status: 201,
@@ -48,13 +56,7 @@ export const api = {
 
   async deleteSurvey(id: string): Promise<MockAPIResponse<void>> {
     await delay(800);
-    const index = mockSurveys.findIndex(s => s.id === id);
-    
-    if (index === -1) {
-      throw new Error('Survey not found');
-    }
-    
-    mockSurveys.splice(index, 1);
+    storageService.deleteSurvey(id);
     
     return {
       data: undefined,
@@ -67,14 +69,14 @@ export const api = {
     await delay(1000);
     
     // Check if survey exists
-    const survey = mockSurveys.find(s => s.id === surveyId);
+    const survey = storageService.getSurveyById(surveyId);
     if (!survey) {
       throw new Error('Survey not found');
     }
     
     // Create new response
     const newResponse: SurveyResponse = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `response-${Math.random().toString(36).substring(2, 11)}`,
       surveyId,
       answers,
       submittedAt: new Date().toISOString(),
@@ -82,13 +84,8 @@ export const api = {
       userAgent: navigator.userAgent
     };
     
-    mockSurveyResponses.push(newResponse);
-    
-    // Update completion count
-    const surveyIndex = mockSurveys.findIndex(s => s.id === surveyId);
-    if (surveyIndex !== -1) {
-      mockSurveys[surveyIndex].completionCount = (mockSurveys[surveyIndex].completionCount || 0) + 1;
-    }
+    // Save response
+    storageService.saveSurveyResponse(newResponse);
     
     return {
       data: newResponse,
@@ -100,7 +97,7 @@ export const api = {
   async getSurveyResponses(surveyId: string): Promise<MockAPIResponse<SurveyResponse[]>> {
     await delay(800);
     
-    const responses = mockSurveyResponses.filter(r => r.surveyId === surveyId);
+    const responses = storageService.getSurveyResponses(surveyId);
     
     return {
       data: responses,
@@ -112,12 +109,12 @@ export const api = {
   async getSurveyStatistics(surveyId: string): Promise<MockAPIResponse<SurveyStatistics>> {
     await delay(1200);
     
-    const survey = mockSurveys.find(s => s.id === surveyId);
+    const survey = storageService.getSurveyById(surveyId);
     if (!survey) {
       throw new Error('Survey not found');
     }
     
-    const responses = mockSurveyResponses.filter(r => r.surveyId === surveyId);
+    const responses = storageService.getSurveyResponses(surveyId);
     
     // Calculate statistics
     const totalResponses = responses.length;
@@ -183,14 +180,15 @@ export const api = {
   async generateShareableLink(surveyId: string): Promise<MockAPIResponse<string>> {
     await delay(600);
     
-    const survey = mockSurveys.find(s => s.id === surveyId);
+    const survey = storageService.getSurveyById(surveyId);
     if (!survey) {
       throw new Error('Survey not found');
     }
     
     // Generate shareable link if it doesn't exist
     if (!survey.shareableLink) {
-      survey.shareableLink = `${window.location.origin}/s/${Math.random().toString(36).substr(2, 8)}`;
+      survey.shareableLink = storageService.generateShareableLink(surveyId);
+      storageService.saveSurvey(survey);
     }
     
     return {
