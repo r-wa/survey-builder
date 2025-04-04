@@ -15,6 +15,18 @@ export interface Survey {
   status: 'draft' | 'published';
 }
 
+export interface Answer {
+  questionId: string;
+  value: string | string[] | number;
+}
+
+export interface SurveyResponse {
+  id: string;
+  surveyId: string;
+  answers: Answer[];
+  submittedAt: string;
+}
+
 export interface MockAPIResponse<T> {
   data: T;
   status: number;
