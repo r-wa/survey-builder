@@ -24,8 +24,7 @@ Choose **two** of the following tasks to complete:
 
 1. Find and document bugs with detailed reproduction steps
 2. Create a manual regression test pack
-3. Develop Postman tests for API validation
-4. Write automated test cases for critical user flows
+3. Write automated test cases for critical user flows
 
 ## Installation
 
